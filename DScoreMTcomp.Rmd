@@ -1,0 +1,167 @@
+---
+title: "D for Friends and Family"
+author: "Natali Ojeda Meneses"
+date: "12/5/2021"
+output: pdf_document
+---
+
+```{r load packages, warning=FALSE, message = FALSE}
+install.packages("devtools")
+install.packages("stringr")
+devtools::install_github("iatgen/iatgen")
+library(iatgen)
+```
+
+```{r load data }
+#### READ YOUR DATA HERE AND SAVE IN R AS "DAT" ####
+# NOTE: DATA MUST BE IN CSV FORMAT USING LEGACY EXPORT ONLY
+# YOU SHOULD ENSURE THE DATA ARE LOADING CORRECTLY BEFORE ANALYSIS
+dat <- read.csv(file = 'MechTurk_comp.csv', header=T)
+
+```
+
+Participants complete one permutation of the IAT(representing one left/right counterbalance combination of the starting positions for both targets and categories). This means the data are scattered across four sets of variables.
+Because it is necessary to collapse this down across left/right counterbalance permutations, the user runs the combine IATfourblocks()function. This function reaches out across the four permutations and collapses the data down into one variable. This is done four times to create four variables:apractice compatible block, a critical compatible block, a practice incompatible block, and a critical incompatible block.
+
+
+```{r collapse IAT critical blocks, echo=FALSE}
+
+dat$compatible.crit <- combineIATfourblocks(dat$Q4.RP4, dat$Q18.LP4, dat$Q14.RN7, dat$Q28.LN7)
+dat$incompatible.crit <- combineIATfourblocks(dat$Q7.RP7, dat$Q21.LP7, dat$Q11.RN4, dat$Q25.LN4)
+
+```
+
+```{r collapse  IAT practice block, echo=FALSE}
+
+dat$compatible.prac <- combineIATfourblocks(dat$Q3.RP3, dat$Q17.LP3, dat$Q13.RN6, dat$Q27.LN6)
+dat$incompatible.prac <- combineIATfourblocks(dat$Q6.RP6, dat$Q20.LP6, dat$Q10.RN3, dat$Q24.LN3)
+
+```
+
+Next, the user cleans and scores the IAT using the cleanIAT() function. This function accepts as an input the four blocks described above as well as a number of options specifying how the data are to be scored. The default settings for this function provide D-built-in for IATs that used forced error correction (i.e., no error penalty; standard data cleaning procedures). This function then creates a large list containing all the desired information. We typically name this list clean.
+From there, the user can request many things for analysis. Requesting clean$D will return a vector of clean IAT scores.
+
+```{r clean the IAT}
+
+## D-BUILT.IN: USE THIS IF FORCED ERROR CORRECTION WAS ENABLED PER GREENWALD ET AL 2003
+clean <- cleanIAT(dat$compatible.prac, dat$compatible.crit, dat$incompatible.prac, dat$incompatible.crit, error.penalty = FALSE)
+
+## D2SD: USE THIS IF ERROR MESSAGE DISPLAYS BRIEFLY (ERROR PENALTY = 2SD) 
+clean2 <- cleanIAT(dat$compatible.prac, dat$compatible.crit, dat$incompatible.prac, dat$incompatible.crit, error.penalty=TRUE, error.penalty.ms = "2SD")
+
+## D600: USE THIS IF ERROR MESSAGE DISPLAYS BRIEFLY (ERROR PENALTY = 600 MS) 
+clean3 <- cleanIAT(dat$compatible.prac, dat$compatible.crit, dat$incompatible.prac, dat$incompatible.crit, error.penalty=TRUE, error.penalty.ms = 600)
+
+```
+
+```{r keep only participants who completed the IAT}
+
+#Number of completed IATs
+
+sum(!clean$skipped)
+sum(!clean2$skipped)
+sum(!clean3$skipped)
+
+```
+
+```{r Timeout drop rate (% of trials) }
+
+#Timeout rate (% of trials dropped for exceeding 10000ms) 
+
+clean$timeout.rate
+clean2$timeout.rate
+clean3$timeout.rate
+
+```
+
+```{r lower tail drop rate (% of trials)}
+### LOWER TAIL DROP RATE (% of TRIALS) ###
+# NOTE: DEFAULT DATA CLEANING PROCEDURE DOES NOT DROP FAST TRIALS (ONLY FAST PARTICIPANTS) SO THIS WILL BE ZERO
+# UNLESS THAT FEATURES IS TURNED ON
+clean$fasttrial.rate
+clean2$fasttrial.rate
+clean3$fasttrial.rate
+```
+
+```{r fast participant drop count and rate (% sample)}
+
+# Drop rate (% of participants dropped for overly fast responding)
+
+clean$fastprt.count
+clean$fastprt.rate
+clean2$fastprt.count
+clean2$fastprt.rate
+clean3$fastprt.count
+clean3$fastprt.rate
+```
+
+```{r error rate}
+
+# Error rate (% of trials that were incorrect)
+
+clean$error.rate
+clean2$error.rate
+clean3$error.rate
+```
+Reliability refers to the consistency of a measure. A reliable measure includes test-retest reliability, meaning the scores should be the same if tested on the same group of people at different times. A reliable measure should also have internal consistency, which is the consistency of people’s responses across the items on a multiple-item measure. All the items on a measure should reflect the same underlying construct, so the scores on these items should be correlated with each other. Finally, a reliable measure should have inter-rater consistency, meaning that different individuals assessing the same stimuli should score similarly
+
+```{r reliability analysis}
+
+#Reliability (based on an implementation of the De Houwer and De Bruycker [2007] method)
+
+IATreliability(clean)$reliability
+IATreliability(clean2)$reliability
+IATreliability(clean3)$reliability
+
+```
+
+```{r Scoring}
+
+### SCORING: 
+# Positive score: Pro target A (Pro-gay) 
+# Negative score: Pro target B (Pro-straight) 
+
+# D-BUILT.IN: USE THIS IF FORCED ERROR CORRECTION WAS ENABLED PER GREENWALD ET AL 2003
+dscore <- clean$D
+mean(clean$D, na.rm=T)
+sd(clean$D, na.rm=T)
+t.test(clean$D)
+t.test(clean$D)$p.value
+t.test(clean$D)$conf.int[1:2]
+mean(clean$D, na.rm=T) / sd(clean$D, na.rm=T)
+
+# D2SD: USE THIS IF ERROR MESSAGE DISPLAYS BRIEFLY (ERROR PENALTY = 2SD) 
+dscore2 <- clean2$D
+mean(clean2$D, na.rm=T)
+sd(clean2$D, na.rm=T)
+t.test(clean2$D)
+t.test(clean2$D)$p.value
+t.test(clean2$D)$conf.int[1:2]
+mean(clean2$D, na.rm=T) / sd(clean2$D, na.rm=T)
+
+# D600: USE THIS IF ERROR MESSAGE DISPLAYS BRIEFLY (ERROR PENALTY = 600 MS) 
+dscore3 <- clean3$D
+mean(clean3$D, na.rm=T)
+sd(clean3$D, na.rm=T)
+t.test(clean3$D)
+t.test(clean3$D)$p.value
+t.test(clean3$D)$conf.int[1:2]
+mean(clean3$D, na.rm=T) / sd(clean3$D, na.rm=T)
+
+
+```
+
+```{r Export}
+### EXPORT DATA: CONVERT MISSING TO -99 AND EXPORT FILE
+dscore[is.na(dscore)] <- -99 
+write.csv(data.frame(dscore = dscore), "IAToutputMT_D1.csv")
+
+dscore2[is.na(dscore2)] <- -99 
+write.csv(data.frame(dscore2 = dscore2), "IAToutputMT_D2.csv")
+
+dscore3[is.na(dscore3)] <- -99 
+write.csv(data.frame(dscore3 = dscore3), "IAToutputMT_D3.csv")
+
+```
+
+
